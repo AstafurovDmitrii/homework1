@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Каталог телефонов</title>
+</head>
+<body>
+    <h1>Каталог телефонов</h1>
+
+    <div>
+        <a href="?sort=name">Сортировать по названию</a>
+        <a href="?sort=price_asc">Сортировать по цене (возрастание)</a>
+        <a href="?sort=price_desc">Сортировать по цене (убывание)</a>
+    </div>
+
+    <ul>
+        {% for phone in phones %}
+            <li>
+                <a href="{% url 'phone_detail' phone.slug %}">
+                    <img src="{{ phone.image }}" alt="{{ phone.name }}" width="100">
+                    <strong>{{ phone.name }}</strong> - {{ phone.price }} руб.
+                </a>
+            </li>
+        {% endfor %}
+    </ul>
+</body>
+</html>
