@@ -2,6 +2,47 @@ from rest_framework import viewsets, permissions
 from .models import Supplier, Product, Order
 from .serializers import SupplierSerializer, ProductSerializer, OrderSerializer
 
+from rest_framework import viewsets
+from .models import Order
+from .serializers import OrderSerializer
+from .tasks import send_order_email
+
+from rest_framework import viewsets, permissions, status
+from rest_framework.response import Response
+from rest_framework.decorators import action
+from django.core.mail import send_mail
+from django.conf import settings
+
+from .models import Product, Order, OrderItem
+from .serializers import ProductSerializer, OrderSerializer
+from .permissions import IsSupplier, IsCustomer
+
+import csv
+import io
+from rest_framework.views import APIView
+from rest_framework.response import Response
+from rest_framework.permissions import IsAdminUser
+from rest_framework import status
+from .models import Product
+
+import pandas as pd
+from rest_framework.response import Response
+from rest_framework import status, permissions
+from .models import Product, ProductAttribute
+
+from rest_framework import viewsets, permissions
+from .models import ProductAttribute
+from .serializers import ProductAttributeSerializer
+
+from rest_framework.views import APIView
+from rest_framework.response import Response
+from rest_framework import status
+
+from django.utils.decorators import method_decorator
+from django.views.decorators.cache import cache_page
+from rest_framework import viewsets
+from .models import Product
+from .serializers import ProductSerializer
 
 # Поставщики
 class SupplierViewSet(viewsets.ModelViewSet):
@@ -26,17 +67,6 @@ class OrderViewSet(viewsets.ModelViewSet):
     def perform_create(self, serializer):
         serializer.save(client=self.request.user)
 
-
-
-from rest_framework import viewsets, permissions, status
-from rest_framework.response import Response
-from rest_framework.decorators import action
-from django.core.mail import send_mail
-from django.conf import settings
-
-from .models import Product, Order, OrderItem
-from .serializers import ProductSerializer, OrderSerializer
-from .permissions import IsSupplier, IsCustomer
 
 
 class ProductViewSet(viewsets.ModelViewSet):
@@ -108,15 +138,6 @@ class SupplierProductViewSet(viewsets.ModelViewSet):
         return Response({"accepting_orders": supplier.accepting_orders})
 
 
-
-import csv
-import io
-from rest_framework.views import APIView
-from rest_framework.response import Response
-from rest_framework.permissions import IsAdminUser
-from rest_framework import status
-from .models import Product
-
 class ProductImportView(APIView):
     permission_classes = [IsAdminUser]  # только админы
 
@@ -159,14 +180,6 @@ class ProductAttributeViewSet(viewsets.ModelViewSet):
 
 router.register(r'attributes', ProductAttributeViewSet)
 
-
-import csv
-import io
-import pandas as pd
-from rest_framework.views import APIView
-from rest_framework.response import Response
-from rest_framework import status, permissions
-from .models import Product, ProductAttribute
 
 class ProductImportView(APIView):
     permission_classes = [permissions.IsAuthenticated]
@@ -217,13 +230,6 @@ class ProductImportView(APIView):
         return Response({"status": "Импорт завершён"}, status=status.HTTP_200_OK)
 
 
-
-
-from rest_framework import viewsets, permissions
-from .models import ProductAttribute
-from .serializers import ProductAttributeSerializer
-
-
 class ProductAttributeViewSet(viewsets.ModelViewSet):
     queryset = ProductAttribute.objects.all()
     serializer_class = ProductAttributeSerializer
@@ -233,11 +239,6 @@ class ProductAttributeViewSet(viewsets.ModelViewSet):
         # Поставщик или админ может добавить атрибут
         return serializer.save()
 
-
-from rest_framework import viewsets
-from .models import Order
-from .serializers import OrderSerializer
-from .tasks import send_order_email
 
 class OrderViewSet(viewsets.ModelViewSet):
     queryset = Order.objects.all()
@@ -257,3 +258,33 @@ class OrderViewSet(viewsets.ModelViewSet):
             "Новый заказ",
             f"Создан новый заказ #{order.id} от {order.customer.email}"
         )
+
+class CrashTestView(APIView):
+    def get(self, request):
+        division_by_zero = 1 / 0
+        return Response({"status": "ok"})
+    
+class TestErrorView(APIView):
+    def get(self, request):
+        division_by_zero = 1 / 0  # вызовет ошибку
+        return Response({"result": division_by_zero}, status=status.HTTP_200_OK)
+    
+
+
+
+class ProductViewSet(viewsets.ModelViewSet):
+    queryset = Product.objects.all()
+    serializer_class = ProductSerializer
+
+    # Кэшируем список товаров на 60 секунд
+    @method_decorator(cache_page(60 * 1))
+    def list(self, request, *args, **kwargs):
+        return super().list(request, *args, **kwargs)
+
+class SupplierViewSet(viewsets.ModelViewSet):
+    queryset = Supplier.objects.all()
+    serializer_class = SupplierSerializer
+
+@method_decorator(cache_page(60 * 5))  # кэшируем на 5 минут
+def list(self, request, *args, **kwargs):
+    return super().list(request, *args, **kwargs)

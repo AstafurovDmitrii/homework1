@@ -4,38 +4,50 @@ from rest_framework_simplejwt.views import (
     TokenRefreshView,
 )
 
+from django.urls import path, include
+from rest_framework.routers import DefaultRouter
+from .views import ProductAttributeViewSet
+from django.urls import path
+from .views import ProductImportView
+
+import sentry_sdk
+from sentry_sdk.integrations.django import DjangoIntegration
+
+from django.urls import path
+from .views import TestErrorView
+
 urlpatterns = [
     path('api/token/', TokenObtainPairView.as_view(), name='token_obtain_pair'),
     path('api/token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
 ]
 
-
-from django.urls import path
-from .views import ProductImportView
-
 urlpatterns = [
     path('products/import/', ProductImportView.as_view(), name='product-import'),
 ]
-
-
-from django.urls import path
-from .views import ProductImportView
 
 urlpatterns = [
     # ... твои другие пути
     path("import-products/", ProductImportView.as_view(), name="import_products"),
 ]
 
-
-
-
-from django.urls import path, include
-from rest_framework.routers import DefaultRouter
-from .views import ProductAttributeViewSet
-
 router = DefaultRouter()
 router.register(r'attributes', ProductAttributeViewSet)
 
 urlpatterns = [
     path('', include(router.urls)),
+]
+
+path('accounts/', include('allauth.urls')),
+
+sentry_sdk.init(
+    dsn="https://YOUR_SENTRY_DSN_HERE",
+    integrations=[DjangoIntegration()],
+    traces_sample_rate=1.0,
+    send_default_pii=True
+)
+
+
+urlpatterns = [
+    ...
+    path('test-error/', TestErrorView.as_view(), name='test-error'),
 ]
